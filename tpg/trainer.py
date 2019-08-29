@@ -305,6 +305,9 @@ class Trainer:
             parent = random.choice(self.rootTeams)
             child = Team()
 
+            # Initialise external Mem
+            child.mem = parent.mem.copy()
+
             # child starts just like parent
             for learner in parent.learners:
                 child.addLearner(learner)

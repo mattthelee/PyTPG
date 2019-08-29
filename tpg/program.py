@@ -12,16 +12,16 @@ class Program:
     """
     bits for:
     mode   op    dest       src
-    1      111   11111...   11111111111...
+    1      1111   11111...   11111111111...
     Mode: Always 1 bit, whether to use register or input.
-    Op: Always 3 bits, one of 8 math operations (add, sub, mult, div, cos, log,
-        exp, neg).
+    Op: Max 4 bits, one of 9 operations (add, sub, mult, div, cos, log,
+        exp, neg, write).
     Dest: At-least # of bits to store # of registers. The register to place the
         result of the instruction into.
     Src: At-least # of bits to store size of input. The index to take from
         input, or a register depending on Mode.
     """
-    instructionLengths   = [1,3,3,23]
+    instructionLengths   = [1,4,3,23]
 
     idCount = 0 # unique id of each program
 
@@ -43,9 +43,13 @@ class Program:
     Executes the program which returns a single final value.
     """
     @njit
-    def execute(inpt, regs, modes, ops, dsts, srcs):
+    def execute(state, rootMem, regs, modes, ops, dsts, srcs):
         regSize = len(regs)
+        # append rootMem to end of inpt
+        inpt = state.copy()
+        inpt.extend(rootMem)
         inptLen = len(inpt)
+        # iterate through instructions
         for i in range(len(modes)):
             # first get source
             if modes[i] == False:
@@ -53,30 +57,18 @@ class Program:
             else:
                 src = inpt[srcs[i]%inptLen]
 
+            instructionList = getInstructionList()
             # do operation
             op = ops[i]
             x = regs[dsts[i]]
             y = src
             dest = dsts[i]%regSize
-            if op == 0:
-                regs[dest] = x+y
-            elif op == 1:
-                regs[dest] = x-y
-            elif op == 2:
-                regs[dest] = x*y
-            elif op == 3:
-                if y != 0:
-                    regs[dest] = x/y
-            elif op == 4:
-                regs[dest] = math.cos(y)
-            elif op == 5:
-                if y > 0:
-                    regs[dest] = math.log(y)
-            elif op == 6:
-                regs[dest] = math.exp(y)
-            elif op == 7:
-                if x < y:
-                    regs[dest] = x*(-1)
+            # run instructions
+            instructionList[op](regs, dest, y, rootMem)
+
+            # put new mem into inpt
+            updateInpt(inpt,mem)
+
 
             if math.isnan(regs[dest]):
                 regs[dest] = 0
@@ -213,3 +205,56 @@ def bitFlip(num, bit, totalLen):
         newNum = int(binStr[:bit] + '0' + binStr[bit+1:], 2)
 
     return newNum
+
+
+def getInstructionList():
+    instructions = [instAdd, instAdd, instMul, instDiv, instCos, instLog, instExp, instCond, instWrite ]
+
+def instAdd(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    regs[dest] = x+y
+
+def instAdd(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    regs[dest] = x-y
+
+def instMul(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    regs[dest] = x*y
+
+def instDiv(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    if y != 0:
+        regs[dest] = x/y
+
+def instCos(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    regs[dest] = math.cos(y)
+
+def instLog(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    if y > 0:
+        regs[dest] = math.log(y)
+
+def instExp(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    regs[dest] = math.exp(y)
+
+def instCond(regs, dest, y, mem):
+    x = regs[dsts[i]]
+    if x < y:
+        regs[dest] = x*(-1)
+
+def instWrite(regs, dest, y, mem):
+    mid = mem.shape[0] // 2
+    for offset in range(0,mid):
+        pWrite = 0.25 - (0.01*offset)**2
+        for registryIndex in range(len(regs)):
+            if random.random() <= pWrite:
+                mem[mid + offset][registryIndex] = regs[registryIndex]
+            if random.random() <= pWrite:
+                mem[mid - offset][registryIndex] = regs[registryIndex]
+
+def updateInpt(mem, inpt):
+    for i, memVal in enumerate(reversed(inpt)):
+        mem[-i] = memVal

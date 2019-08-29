@@ -1,6 +1,7 @@
 from tpg.utils import flip
 from tpg.learner import Learner
 import random
+import numpy as np
 
 """
 The main building block of TPG. Each team has multiple learning which decide the
@@ -10,23 +11,29 @@ class Team:
 
     idCount = 0
 
-    def __init__(self):
+    def __init__(self, memDim):
         self.learners = []
         self.outcomes = {} # scores at various tasks
         self.fitness = None
         self.numLearnersReferencing = 0 # number of learners that reference this
         self.id = Team.idCount
         Team.idCount += 1
+        self.mem = np.zeros(memDim)
 
     """
     Returns an action to use based on the current state.
     """
-    def act(self, state, visited=set()):
+    def act(self, state, rootMem = None,  visited=set()):
+        if rootMem == None and self.numLearnersReferencing == 0:
+            rootMem = self.mem
+        elif: self.numLearnersReferencing == 0:
+            raise Exception('Non-root team not supplied with root mem')
+            
         visited.add(self) # track visited teams
 
         topLearner = max([lrnr for lrnr in self.learners
                 if lrnr.isActionAtomic() or lrnr.action not in visited],
-            key=lambda lrnr: lrnr.bid(state))
+            key=lambda lrnr: lrnr.bid(state, rootMem))
 
         return topLearner.getAction(state, visited=visited)
 
