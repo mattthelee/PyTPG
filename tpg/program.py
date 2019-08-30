@@ -164,8 +164,20 @@ class Program:
                 idx = random.randint(0, len(self.instructions)-1)
                 num = self.instructions[idx]
                 totalLen = sum(Program.instructionLengths)
-                bit = random.randint(0, totalLen-1)
-                self.instructions[idx] = bitFlip(num, bit, totalLen)
+                while True:
+                    bit = random.randint(0, totalLen-1)
+                    newInst = bitFlip(num, bit, totalLen)
+                    # check that new op int is valid, else choose bit again
+                    if len(self.instructionList) <= getIntSegment(newInst, Program.instructionLengths[0],
+                        Program.instructionLengths[1], totalLen):
+                        continue
+                    else:
+                        self.instructions[idx] = newInst
+                        break
+                    
+                
+           
+                        
                 changed = True
 
             # maybe swap two instructions
@@ -181,9 +193,19 @@ class Program:
             # maybe add instruction
             if flip(pAdd):
                 maxInst = 2**sum(Program.instructionLengths)-1
-                self.instructions.insert(
+                while True:
+                    newInst = random.randint(0, maxInst)
+                
+                
+                    # check op bits are valid
+                    if len(self.instructionList) <= getIntSegment(newInst, Program.instructionLengths[0],
+                        Program.instructionLengths[1], totalLen):
+                        continue
+                    else:
+                        self.instructions.insert(
                             random.randint(0, len(self.instructions)-1),
-                            random.randint(0, maxInst))
+                           newInst )
+                        break
                 changed = True
 
 """
