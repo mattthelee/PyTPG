@@ -20,7 +20,7 @@ class Trainer:
         uniqueProgThresh=0, initMaxTeamSize=5, initMaxProgSize=128, registerSize=8,
         pDelLrn=0.7, pAddLrn=0.7, pMutLrn=0.3, pMutProg=0.66, pMutAct=0.33,
         pActAtom=0.5, pDelInst=0.5, pAddInst=0.5, pSwpInst=1.0, pMutInst=1.0,
-        pSwapMultiAct=0.66, pChangeMultiAct=0.40, doElites=True):
+        pSwapMultiAct=0.66, pChangeMultiAct=0.40, doElites=True, memSize = 100):
 
         # store all necessary params
         self.actions = actions
@@ -45,6 +45,8 @@ class Trainer:
         self.pSwapMultiAct = pSwapMultiAct
         self.pChangeMultiAct = pChangeMultiAct
         self.doElites = doElites
+        self.memSize = memSize
+        self.registerSize = registerSize
 
         self.teams = []
         self.rootTeams = []
@@ -54,13 +56,13 @@ class Trainer:
 
         self.generation = 0
 
-        self.initializePopulations(initMaxTeamSize, initMaxProgSize, registerSize)
+        self.initializePopulations(initMaxTeamSize, initMaxProgSize, registerSize, memSize)
 
     """
     Initializes a popoulation of teams and learners generated randomly with only
     atomic actions.
     """
-    def initializePopulations(self, initMaxTeamSize, initMaxProgSize, registerSize):
+    def initializePopulations(self, initMaxTeamSize, initMaxProgSize, registerSize, memSize):
         for i in range(self.teamPopSize):
             # create 2 unique actions and learners
             if self.multiAction == False:
@@ -78,7 +80,7 @@ class Trainer:
             self.learners.append(l2)
 
             # create team and add initial learners
-            team = Team()
+            team = Team(memDim = (memSize,registerSize))
             team.addLearner(l1)
             team.addLearner(l2)
 

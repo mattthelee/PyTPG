@@ -3,6 +3,7 @@ import numpy as np
 from numba import njit
 import math
 from tpg.utils import flip
+import pdb
 
 """
 A program that is executed to help obtain the bid for a learner.
@@ -42,12 +43,12 @@ class Program:
     """
     Executes the program which returns a single final value.
     """
-    @njit
     def execute(state, rootMem, regs, modes, ops, dsts, srcs):
         regSize = len(regs)
         # append rootMem to end of inpt
         inpt = state.copy()
-        inpt.extend(rootMem)
+        inpt = list(inpt)
+        inpt.extend(rootMem.flatten())
         inptLen = len(inpt)
         # iterate through instructions
         for i in range(len(modes)):
@@ -57,17 +58,48 @@ class Program:
             else:
                 src = inpt[srcs[i]%inptLen]
 
-            instructionList = getInstructionList()
             # do operation
             op = ops[i]
             x = regs[dsts[i]]
             y = src
             dest = dsts[i]%regSize
             # run instructions
-            instructionList[op](regs, dest, y, rootMem)
+            if op == 0:
+                regs[dest] = x+y
+            elif op == 1:
+                regs[dest] = x-y
+            elif op == 2:
+                regs[dest] = x*y
+            elif op == 3:
+                if y != 0:
+                    regs[dest] = x/y
+            elif op == 4:
+                regs[dest] = math.cos(y)
+            elif op == 5:
+                if y > 0:
+                    regs[dest] = math.log(y)
+            elif op == 6:
+                regs[dest] = math.exp(y)
+            elif op == 7:
+                if x < y:
+                    regs[dest] = x*(-1)
+            elif op == 8:
+                mid = rootMem.shape[0] // 2
+                for offset in range(0,mid):
+                    pWrite = 0.25 - (0.01*offset)**2
+                    for registryIndex in range(len(regs)):
+                        if random.random() <= pWrite:
+                            rootMem[mid + offset][registryIndex] = regs[registryIndex]
+                        if random.random() <= pWrite:
+                            rootMem[mid - offset][registryIndex] = regs[registryIndex]
+            elif op > 8:
+                print('Operation bit too high for instructions')
+                print(op)
+                pdb.set_trace()
 
             # put new mem into inpt
-            updateInpt(inpt,mem)
+            for i, memVal in enumerate(reversed(rootMem.flatten())):
+                inpt[-i] = memVal
 
 
             if math.isnan(regs[dest]):
@@ -174,10 +206,10 @@ class Program:
                     else:
                         self.instructions[idx] = newInst
                         break
-                    
-                
-           
-                        
+
+
+
+
                 changed = True
 
             # maybe swap two instructions
@@ -195,8 +227,8 @@ class Program:
                 maxInst = 2**sum(Program.instructionLengths)-1
                 while True:
                     newInst = random.randint(0, maxInst)
-                
-                
+
+
                     # check op bits are valid
                     if len(self.instructionList) <= getIntSegment(newInst, Program.instructionLengths[0],
                         Program.instructionLengths[1], totalLen):
@@ -228,55 +260,6 @@ def bitFlip(num, bit, totalLen):
 
     return newNum
 
-
-def getInstructionList():
-    instructions = [instAdd, instAdd, instMul, instDiv, instCos, instLog, instExp, instCond, instWrite ]
-
-def instAdd(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    regs[dest] = x+y
-
-def instAdd(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    regs[dest] = x-y
-
-def instMul(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    regs[dest] = x*y
-
-def instDiv(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    if y != 0:
-        regs[dest] = x/y
-
-def instCos(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    regs[dest] = math.cos(y)
-
-def instLog(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    if y > 0:
-        regs[dest] = math.log(y)
-
-def instExp(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    regs[dest] = math.exp(y)
-
-def instCond(regs, dest, y, mem):
-    x = regs[dsts[i]]
-    if x < y:
-        regs[dest] = x*(-1)
-
-def instWrite(regs, dest, y, mem):
-    mid = mem.shape[0] // 2
-    for offset in range(0,mid):
-        pWrite = 0.25 - (0.01*offset)**2
-        for registryIndex in range(len(regs)):
-            if random.random() <= pWrite:
-                mem[mid + offset][registryIndex] = regs[registryIndex]
-            if random.random() <= pWrite:
-                mem[mid - offset][registryIndex] = regs[registryIndex]
-
-def updateInpt(mem, inpt):
+def updateInpt(rootMem, inpt):
     for i, memVal in enumerate(reversed(inpt)):
-        mem[-i] = memVal
+        rootMem[-i] = memVal

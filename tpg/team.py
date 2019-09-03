@@ -2,7 +2,7 @@ from tpg.utils import flip
 from tpg.learner import Learner
 import random
 import numpy as np
-
+import pdb
 """
 The main building block of TPG. Each team has multiple learning which decide the
 action to take in the graph.
@@ -23,41 +23,26 @@ class Team:
     """
     Returns an action to use based on the current state.
     """
-    def act(self, state, rootMem = None,  visited=set()):
-        if rootMem == None and self.numLearnersReferencing == 0:
+    def act(self, state, rootMem = [],  visited=set()):
+
+        # If this is a root team, then use it's own memory
+        if len(rootMem) == 0 and self.numLearnersReferencing == 0:
             rootMem = self.mem
-        elif: self.numLearnersReferencing == 0:
+        elif len(rootMem) == 0 and self.numLearnersReferencing != 0 :
+            pdb.set_trace()
             raise Exception('Non-root team not supplied with root mem')
-            
+        elif len(rootMem) != 0 and self.numLearnersReferencing == 0:
+            pdb.set_trace()
+            raise Exception('root team supplied with root mem')
+
+
         visited.add(self) # track visited teams
 
         topLearner = max([lrnr for lrnr in self.learners
                 if lrnr.isActionAtomic() or lrnr.action not in visited],
             key=lambda lrnr: lrnr.bid(state, rootMem))
 
-        return topLearner.getAction(state, visited=visited)
-
-    """
-    Same as act, but with additional features. Use act for performance.
-    """
-    def act2(self, state, visited=set(), numStates=50):
-        visited.add(self) # track visited teams
-
-        # first get candidate (unvisited) learners
-        learners = [lrnr for lrnr in self.learners
-                if lrnr.action not in visited]
-        # break down getting bids to do more stuff to learners
-        topLearner = learners[0]
-        topBid = learners[0].bid(state)
-        learners[0].saveState(state, numStates=numStates)
-        for lrnr in learners[1:]:
-            bid = lrnr.bid(state)
-            lrnr.saveState(state, numStates=numStates)
-            if bid > topBid:
-                topLearner = lrnr
-                topBid = bid
-
-        return topLearner.getAction(state, visited=visited)
+        return topLearner.getAction(state, rootMem, visited=visited)
 
     """
     Adds learner to the team and updates number of references to that program.

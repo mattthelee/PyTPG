@@ -48,11 +48,11 @@ class Learner:
     Returns the action of this learner, either atomic, or requests the action
     from the action team.
     """
-    def getAction(self, state, visited):
+    def getAction(self, state, rootMem, visited):
         if self.isActionAtomic():
             return self.action
         else:
-            return self.action.act(state, visited)
+            return self.action.act(state, rootMem, visited)
 
 
     """
