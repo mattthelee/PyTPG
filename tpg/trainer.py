@@ -305,7 +305,7 @@ class Trainer:
 
             # get parent root team, and child to be based on that
             parent = random.choice(self.rootTeams)
-            child = Team()
+            child = Team(memDim = parent.mem.shape)
 
             # Initialise external Mem
             child.mem = parent.mem.copy()

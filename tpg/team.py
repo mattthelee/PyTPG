@@ -108,7 +108,7 @@ class Team:
         p = pAddLrn
         while flip(p):
             p *= pAddLrn # decrease next chance
-
+            #import pdb; pdb.set_trace()
             learner = random.choice([l for l in allLearners
                                      if l not in self.learners and
                                         l.action is not self])

@@ -30,12 +30,12 @@ class Program:
         if instructions is not None: # copy from existing
             self.instructions = list(instructions)
         else: # create random new
-            maxInst = 2**sum(Program.instructionLengths)-1
-            self.instructions = [random.randint(0, maxInst) for _ in
+            self.instructions = [self.createInstruction() for _ in
                             range(random.randint(1, maxProgramLength))]
-
+        self.instructionList = getInstructionList()
         self.id = Program.idCount
         Program.idCount += 1
+
 
         self.update()
 
@@ -43,12 +43,13 @@ class Program:
     """
     Executes the program which returns a single final value.
     """
-    def execute(state, rootMem, regs, modes, ops, dsts, srcs):
+    def execute(self, state, rootMem, regs, modes, ops, dsts, srcs):
         regSize = len(regs)
         # append rootMem to end of inpt
         inpt = state.copy()
         inpt = list(inpt)
-        inpt.extend(rootMem.flatten())
+        mem = rootMem.flatten()
+        inpt.extend(mem)
         inptLen = len(inpt)
         # iterate through instructions
         for i in range(len(modes)):
@@ -64,41 +65,12 @@ class Program:
             y = src
             dest = dsts[i]%regSize
             # run instructions
-            if op == 0:
-                regs[dest] = x+y
-            elif op == 1:
-                regs[dest] = x-y
-            elif op == 2:
-                regs[dest] = x*y
-            elif op == 3:
-                if y != 0:
-                    regs[dest] = x/y
-            elif op == 4:
-                regs[dest] = math.cos(y)
-            elif op == 5:
-                if y > 0:
-                    regs[dest] = math.log(y)
-            elif op == 6:
-                regs[dest] = math.exp(y)
-            elif op == 7:
-                if x < y:
-                    regs[dest] = x*(-1)
-            elif op == 8:
-                mid = rootMem.shape[0] // 2
-                for offset in range(0,mid):
-                    pWrite = 0.25 - (0.01*offset)**2
-                    for registryIndex in range(len(regs)):
-                        if random.random() <= pWrite:
-                            rootMem[mid + offset][registryIndex] = regs[registryIndex]
-                        if random.random() <= pWrite:
-                            rootMem[mid - offset][registryIndex] = regs[registryIndex]
-            elif op > 8:
-                print('Operation bit too high for instructions')
-                print(op)
-                pdb.set_trace()
 
+            if op >= len(self.instructionList):
+                pdb.set_trace()
+            self.instructionList[op](regs, dest, x, y, rootMem)
             # put new mem into inpt
-            for i, memVal in enumerate(reversed(rootMem.flatten())):
+            for i, memVal in enumerate(reversed(mem)):
                 inpt[-i] = memVal
 
 
@@ -200,15 +172,12 @@ class Program:
                     bit = random.randint(0, totalLen-1)
                     newInst = bitFlip(num, bit, totalLen)
                     # check that new op int is valid, else choose bit again
-                    if len(self.instructionList) <= getIntSegment(newInst, Program.instructionLengths[0],
+                    if len(self.instructionList) < getIntSegment(newInst, Program.instructionLengths[0],
                         Program.instructionLengths[1], totalLen):
                         continue
                     else:
                         self.instructions[idx] = newInst
                         break
-
-
-
 
                 changed = True
 
@@ -224,21 +193,27 @@ class Program:
 
             # maybe add instruction
             if flip(pAdd):
-                maxInst = 2**sum(Program.instructionLengths)-1
-                while True:
-                    newInst = random.randint(0, maxInst)
-
-
-                    # check op bits are valid
-                    if len(self.instructionList) <= getIntSegment(newInst, Program.instructionLengths[0],
-                        Program.instructionLengths[1], totalLen):
-                        continue
-                    else:
-                        self.instructions.insert(
+                newInst = self.createInstruction()
+                self.instructions.insert(
                             random.randint(0, len(self.instructions)-1),
                            newInst )
-                        break
                 changed = True
+
+    """
+    Creates a new randomly generated instruction
+    """
+    def createInstruction(self):
+        maxInst = 2**sum(Program.instructionLengths)-1
+        totalLen = sum(Program.instructionLengths)
+        while True:
+            newInst = random.randint(0, maxInst)
+            # check op bits are valid
+            if len(getInstructionList()) <= getIntSegment(newInst, Program.instructionLengths[0],
+                Program.instructionLengths[1], totalLen):
+                continue
+            else:
+                return newInst
+
 
 """
 Takes an int and returns another int made of some bits of the original.
@@ -259,6 +234,54 @@ def bitFlip(num, bit, totalLen):
         newNum = int(binStr[:bit] + '0' + binStr[bit+1:], 2)
 
     return newNum
+
+def getInstructionList():
+    return [instAdd, instAdd, instMul, instDiv, instCos, instLog, instExp, instCond, instWrite ]
+
+@njit
+def instAdd(regs, dest, x, y, mem):
+    regs[dest] = x+y
+
+@njit
+def instAdd(regs, dest, x, y, mem):
+    regs[dest] = x-y
+
+@njit
+def instMul(regs, dest, x, y, mem):
+    regs[dest] = x*y
+
+@njit
+def instDiv(regs, dest, x, y, mem):
+    if y != 0:
+        regs[dest] = x/y
+
+@njit
+def instCos(regs, dest, x, y, mem):
+    regs[dest] = math.cos(y)
+
+@njit
+def instLog(regs, dest, x, y, mem):
+    if y > 0:
+        regs[dest] = math.log(y)
+
+@njit
+def instExp(regs, dest, x, y, mem):
+    regs[dest] = math.exp(y)
+
+@njit
+def instCond(regs, dest, x, y, mem):
+    if x < y:
+        regs[dest] = x*(-1)
+
+def instWrite(regs, dest, x, y, mem):
+    mid = mem.shape[0] // 2
+    for offset in range(0,mid):
+        pWrite = 0.25 - (0.01*offset)**2
+        for registryIndex in range(len(regs)):
+            if random.random() <= pWrite:
+                mem[mid + offset][registryIndex] = regs[registryIndex]
+            if random.random() <= pWrite:
+                mem[mid - offset][registryIndex] = regs[registryIndex]
 
 def updateInpt(rootMem, inpt):
     for i, memVal in enumerate(reversed(inpt)):
