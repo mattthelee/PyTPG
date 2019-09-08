@@ -65,9 +65,6 @@ class Program:
             y = src
             dest = dsts[i]%regSize
             # run instructions
-
-            if op >= len(self.instructionList):
-                pdb.set_trace()
             self.instructionList[op](regs, dest, x, y, rootMem)
             # put new mem into inpt
             for i, memVal in enumerate(reversed(mem)):
@@ -172,8 +169,7 @@ class Program:
                     bit = random.randint(0, totalLen-1)
                     newInst = bitFlip(num, bit, totalLen)
                     # check that new op int is valid, else choose bit again
-                    if len(self.instructionList) < getIntSegment(newInst, Program.instructionLengths[0],
-                        Program.instructionLengths[1], totalLen):
+                    if  getIntSegment(newInst, Program.instructionLengths[0],Program.instructionLengths[1], totalLen) >= len(self.instructionList) :
                         continue
                     else:
                         self.instructions[idx] = newInst
@@ -208,8 +204,8 @@ class Program:
         while True:
             newInst = random.randint(0, maxInst)
             # check op bits are valid
-            if len(getInstructionList()) <= getIntSegment(newInst, Program.instructionLengths[0],
-                Program.instructionLengths[1], totalLen):
+            if getIntSegment(newInst, Program.instructionLengths[0],
+                Program.instructionLengths[1], totalLen) >= len(getInstructionList()) :
                 continue
             else:
                 return newInst

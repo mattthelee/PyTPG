@@ -26,11 +26,8 @@ class Team:
     def act(self, state, rootMem = [],  visited=set()):
 
         # If this is a root team, then use it's own memory
-        if len(rootMem) == 0 and self.numLearnersReferencing == 0:
+        if len(rootMem) == 0:
             rootMem = self.mem
-        elif len(rootMem) == 0 and self.numLearnersReferencing != 0 :
-            pdb.set_trace()
-            raise Exception('Non-root team not supplied with root mem')
         elif len(rootMem) != 0 and self.numLearnersReferencing == 0:
             pdb.set_trace()
             raise Exception('root team supplied with root mem')
