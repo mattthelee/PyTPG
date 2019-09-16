@@ -33,7 +33,7 @@ class Program:
         else: # create random new
             self.instructions = [self.createInstruction() for _ in
                             range(random.randint(1, maxProgramLength))]
-        self.instructionList = getInstructionList()
+        self.instructionList = getOperationList()
         self.id = Program.idCount
         Program.idCount += 1
 
@@ -63,7 +63,6 @@ class Program:
             elif modes[i] == 2:
                 src = mem[srcs[i]%memSize]
             else:
-                pdb.set_trace()
                 raise Exception('Mode not set correctly')
 
             # do operation
@@ -214,7 +213,7 @@ class Program:
 
     def checkInstructionValid(self, instruction):
         totalLen = sum(Program.instructionLengths)
-        opsCorrect = getIntSegment(instruction, Program.instructionLengths[0],Program.instructionLengths[1], totalLen) < len(getInstructionList())
+        opsCorrect = getIntSegment(instruction, Program.instructionLengths[0],Program.instructionLengths[1], totalLen) < len(getOperationList())
         modeCorrect = getIntSegment(instruction, 0,Program.instructionLengths[0], totalLen) < 3
         return opsCorrect and modeCorrect
 
@@ -238,7 +237,7 @@ def bitFlip(num, bit, totalLen):
 
     return newNum
 
-def getInstructionList():
+def getOperationList():
     return [instAdd, instAdd, instMul, instDiv, instCos, instLog, instExp, instCond, instWrite ]
 
 @njit
@@ -276,6 +275,7 @@ def instCond(regs, dest, x, y, mem):
     if x < y:
         regs[dest] = x*(-1)
 
+@njit
 def instWrite(regs, dest, x, y, mem):
     mid = mem.shape[0] // 2
     for offset in range(0,mid):
