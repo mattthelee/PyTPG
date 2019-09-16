@@ -13,8 +13,8 @@ class Program:
     """
     bits for:
     mode   op    dest       src
-    1      1111   11111...   11111111111...
-    Mode: Always 1 bit, whether to use register or input.
+    11      1111   11111...   11111111111...
+    Mode:  2 bit, whether to use register, input or memory.
     Op: Max 4 bits, one of 9 operations (add, sub, mult, div, cos, log,
         exp, neg, write).
     Dest: At-least # of bits to store # of registers. The register to place the
@@ -22,7 +22,8 @@ class Program:
     Src: At-least # of bits to store size of input. The index to take from
         input, or a register depending on Mode.
     """
-    instructionLengths   = [1,4,3,23]
+    instructionLengths   = [2,4,3,23]
+
 
     idCount = 0 # unique id of each program
 
@@ -44,20 +45,26 @@ class Program:
     Executes the program which returns a single final value.
     """
     def execute(self, state, rootMem, regs, modes, ops, dsts, srcs):
+
         regSize = len(regs)
         # append rootMem to end of inpt
         inpt = state.copy()
         inpt = list(inpt)
         mem = rootMem.flatten()
-        inpt.extend(mem)
         inptLen = len(inpt)
+        memSize = len(mem)
         # iterate through instructions
         for i in range(len(modes)):
             # first get source
-            if modes[i] == False:
+            if modes[i] == 0:
                 src = regs[srcs[i]%regSize]
-            else:
+            elif modes[i] == 1:
                 src = inpt[srcs[i]%inptLen]
+            elif modes[i] == 2:
+                src = mem[srcs[i]%memSize]
+            else:
+                pdb.set_trace()
+                raise Exception('Mode not set correctly')
 
             # do operation
             op = ops[i]
@@ -96,7 +103,7 @@ class Program:
             ]
             for inst in self.instructions])
 
-        self.modes = np.array(instsData[:,0], dtype = bool)
+        self.modes = np.array(instsData[:,0], dtype = np.int8)
         self.operations = np.array(instsData[:,1], dtype = np.int8)
         self.destinations = np.array(instsData[:,2], dtype = np.int8)
         self.sources = np.array(instsData[:,3], dtype = np.int32)
@@ -169,9 +176,7 @@ class Program:
                     bit = random.randint(0, totalLen-1)
                     newInst = bitFlip(num, bit, totalLen)
                     # check that new op int is valid, else choose bit again
-                    if  getIntSegment(newInst, Program.instructionLengths[0],Program.instructionLengths[1], totalLen) >= len(self.instructionList) :
-                        continue
-                    else:
+                    if  self.checkInstructionValid(newInst):
                         self.instructions[idx] = newInst
                         break
 
@@ -200,16 +205,18 @@ class Program:
     """
     def createInstruction(self):
         maxInst = 2**sum(Program.instructionLengths)-1
-        totalLen = sum(Program.instructionLengths)
+
         while True:
             newInst = random.randint(0, maxInst)
             # check op bits are valid
-            if getIntSegment(newInst, Program.instructionLengths[0],
-                Program.instructionLengths[1], totalLen) >= len(getInstructionList()) :
-                continue
-            else:
+            if self.checkInstructionValid(newInst):
                 return newInst
 
+    def checkInstructionValid(self, instruction):
+        totalLen = sum(Program.instructionLengths)
+        opsCorrect = getIntSegment(instruction, Program.instructionLengths[0],Program.instructionLengths[1], totalLen) < len(getInstructionList())
+        modeCorrect = getIntSegment(instruction, 0,Program.instructionLengths[0], totalLen) < 3
+        return opsCorrect and modeCorrect
 
 """
 Takes an int and returns another int made of some bits of the original.
